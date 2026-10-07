@@ -1,0 +1,148 @@
+amends
+  "https://raw.githubusercontent.com/CollaborativeStateMachines/Cirrina/refs/heads/develop/src/main/resources/pkl/csm/csml.pkl"
+import
+  "https://raw.githubusercontent.com/CollaborativeStateMachines/Cirrina-CSML-SmartFactory/refs/heads/develop/smartFactory/arm.pkl"
+import
+  "https://raw.githubusercontent.com/CollaborativeStateMachines/Cirrina-CSML-SmartFactory/refs/heads/develop/smartFactory/assemblyController.pkl"
+import
+  "https://raw.githubusercontent.com/CollaborativeStateMachines/Cirrina-CSML-SmartFactory/refs/heads/develop/smartFactory/belt.pkl"
+import
+  "https://raw.githubusercontent.com/CollaborativeStateMachines/Cirrina-CSML-SmartFactory/refs/heads/develop/smartFactory/jobController.pkl"
+import
+  "https://raw.githubusercontent.com/CollaborativeStateMachines/Cirrina-CSML-SmartFactory/refs/heads/develop/smartFactory/messageProcessor.pkl"
+import
+  "https://raw.githubusercontent.com/CollaborativeStateMachines/Cirrina-CSML-SmartFactory/refs/heads/develop/smartFactory/monitor.pkl"
+import
+  "https://raw.githubusercontent.com/CollaborativeStateMachines/Cirrina-CSML-SmartFactory/refs/heads/develop/smartFactory/serviceTypes.pkl"
+  as ServiceTypes
+import
+  "https://raw.githubusercontent.com/CollaborativeStateMachines/Cirrina-CSML-SmartFactory/refs/heads/develop/smartFactory/variables.pkl"
+  as Vars
+
+collaborativeStateMachine {
+  stateMachines {
+    ["jobController"] = jobController.sm
+    ["belt"] = belt.sm
+    ["arm"] = arm.sm
+    ["messageProcessor"] = messageProcessor.email
+    ["monitor"] = monitor.sm
+    ["assemblyController"] = assemblyController.sm
+  }
+
+  persistent {
+    [Vars.vIsJobDone] = "false"
+    [Vars.vLogs] = "[...]"
+    [Vars.vProductsCompleted] = "0"
+  }
+}
+
+instances {
+  ["messageProcessor"] { stateMachineName = "messageProcessor" }
+  ["jobController"] { stateMachineName = "jobController" }
+  ["conveyorBelt"] { stateMachineName = "belt" }
+  ["arm"] { stateMachineName = "arm" }
+  ["monitor"] { stateMachineName = "monitor" }
+  ["assemblyController"] { stateMachineName = "assemblyController" }
+}
+
+bindings {
+  new HttpServiceImplementationBinding {
+    name = ServiceTypes.stMoveBelt
+    `local` = false
+    scheme = "http"
+    host = "localhost"
+    port = 6000
+    endPoint = "/movebelt"
+    method = "POST"
+  }
+  new HttpServiceImplementationBinding {
+    name = ServiceTypes.stStopBelt
+    `local` = false
+    scheme = "http"
+    host = "localhost"
+    port = 6000
+    endPoint = "/stopbelt"
+    method = "POST"
+  }
+  new HttpServiceImplementationBinding {
+    name = ServiceTypes.stTakePhoto
+    `local` = false
+    scheme = "http"
+    host = "localhost"
+    port = 6000
+    endPoint = "/takephoto"
+    method = "POST"
+  }
+  new HttpServiceImplementationBinding {
+    name = ServiceTypes.stScanPhoto
+    `local` = false
+    scheme = "http"
+    host = "localhost"
+    port = 6000
+    endPoint = "/scanphoto"
+    method = "POST"
+  }
+  new HttpServiceImplementationBinding {
+    name = ServiceTypes.stPickup
+    `local` = false
+    scheme = "http"
+    host = "localhost"
+    port = 6000
+    endPoint = "/pickup"
+    method = "POST"
+  }
+  new HttpServiceImplementationBinding {
+    name = ServiceTypes.stAssemble
+    `local` = false
+    scheme = "http"
+    host = "localhost"
+    port = 6000
+    endPoint = "/assemble"
+    method = "POST"
+  }
+  new HttpServiceImplementationBinding {
+    name = ServiceTypes.stReturnToStart
+    `local` = false
+    scheme = "http"
+    host = "localhost"
+    port = 6000
+    endPoint = "/returntostart"
+    method = "POST"
+  }
+  new HttpServiceImplementationBinding {
+    name = ServiceTypes.stProcessEmail
+    `local` = false
+    scheme = "http"
+    host = "localhost"
+    port = 6000
+    endPoint = "/process/email"
+    method = "POST"
+  }
+  new HttpServiceImplementationBinding {
+    name = ServiceTypes.stProcessSms
+    `local` = false
+    scheme = "http"
+    host = "localhost"
+    port = 6000
+    endPoint = "/process/sms"
+    method = "POST"
+  }
+  new HttpServiceImplementationBinding {
+    name = ServiceTypes.stSendStatistics
+    `local` = false
+    scheme = "http"
+    host = "localhost"
+    port = 6000
+    endPoint = "/statistics"
+    method = "POST"
+  }
+  new HttpServiceImplementationBinding {
+    name = ServiceTypes.stDiscardObject
+    `local` = false
+    scheme = "http"
+    host = "localhost"
+    port = 6000
+    endPoint = "/discardobject"
+    method = "POST"
+  }
+}

@@ -1,0 +1,208 @@
+import
+  "https://raw.githubusercontent.com/CollaborativeStateMachines/Cirrina-CSML-SmartFactory/refs/heads/develop/smartFactory/events.pkl"
+  as Events
+import
+  "https://raw.githubusercontent.com/CollaborativeStateMachines/Cirrina-CSML-SmartFactory/refs/heads/develop/smartFactory/serviceTypes.pkl"
+  as ServiceTypes
+import
+  "https://raw.githubusercontent.com/CollaborativeStateMachines/Cirrina-CSML-SmartFactory/refs/heads/develop/smartFactory/variables.pkl"
+  as Vars
+import
+  "https://raw.githubusercontent.com/CollaborativeStateMachines/Cirrina/refs/heads/develop/src/main/resources/pkl/csm/csml.pkl"
+
+sm = new csml.StateMachine {
+  transient = new Mapping {
+    ["pickupSuccess"] = "true"
+    ["errorMsg"] = "''"
+    ["partsAssembled"] = "0"
+    ["partsPerProduct"] = "1000"
+  }
+
+  states {
+    ["idle"] = new csml.Initial {
+      entry {
+        new csml.Match {
+          cases {
+            new csml.Case {
+              of = "!pickupSuccess"
+              yields {
+                new csml.Emit { event = new csml.Internal { topic = Events.ePickupNotSuccess } }
+              }
+            }
+          }
+        }
+      }
+
+      on {
+        [Events.eJobDone] {
+          to = "jobDone"
+        }
+        [Events.eArmPickup] {
+          to = "pickup"
+          provided = "!\(Vars.vIsJobDone)"
+        }
+        [Events.ePickupNotSuccess] {
+          to = "pickup"
+        }
+      }
+    }
+
+    ["pickup"] = new csml.State {
+      entry {
+        new csml.Invoke {
+          type = ServiceTypes.stPickup
+        }
+      }
+
+      on {
+        [Events.eUpdatePickupStatus] {
+          yields {
+            new csml.Eval { expression = "pickupSuccess = $success" }
+            new csml.Match {
+              cases {
+                new csml.Case {
+                  of = "$success"
+                  yields {
+                    new csml.Emit {
+                      event { topic = Events.ePickedUp }
+                    }
+                  }
+                }
+              }
+              default = new csml.Eval { expression = "errorMsg = 'Pickup failed...'" }
+            }
+            new csml.Emit { event = new csml.Internal { topic = Events.eCheckPickUpSuccess } }
+          }
+        }
+
+        [Events.eCheckPickUpSuccess] {
+          to = "assemble"
+          provided = "pickupSuccess"
+          or = "error"
+        }
+      }
+    }
+
+    ["error"] = new csml.State {
+      entry {
+        new csml.Emit {
+          event {
+            topic = Events.eProcessMessage
+            data { ["msg"] = "'Fatal robotic arm failure: ' + errorMsg" }
+          }
+          target = "'messageProcessor'"
+        }
+      }
+
+      after {
+        ["pickupRetryTimeout"] = new csml.Timeout {
+          delay = "2000"
+          triggers = new csml.Emit { event = new csml.Internal { topic = Events.eRetry } }
+        }
+      }
+
+      on {
+        [Events.eRetry] {
+          to = "assemble"
+          provided = "pickupSuccess"
+          or = "return"
+        }
+
+        [Events.eUpdatePickupStatus] {
+          yields {
+            new csml.Eval { expression = "pickupSuccess = $success" }
+          }
+        }
+
+        [Events.eJobDone] {
+          to = "jobDone"
+        }
+      }
+    }
+
+    ["assemble"] = new csml.State {
+      entry {
+        new csml.Invoke {
+          type = ServiceTypes.stAssemble
+        }
+      }
+
+      on {
+        [Events.eCheckAssembleSuccess] {
+          yields {
+            new csml.Match {
+              cases {
+                new csml.Case {
+                  of = "$success"
+                  yields {
+                    new csml.Emit {
+                      event = new csml.Internal { topic = Events.eAssemblySuccessful }
+                    }
+                  }
+                }
+                new csml.Case {
+                  of = "!($success)"
+                  yields {
+                    new csml.Emit {
+                      event = new csml.Internal { topic = Events.eAssemblyUnsuccessful }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+
+        [Events.eAssemblySuccessful] {
+          to = "return"
+          yields {
+            new csml.Eval { expression = "partsAssembled = partsAssembled + 1" }
+            new csml.Emit {
+              event { topic = Events.eAssemblyComplete }
+              target = "'monitor'"
+            }
+          }
+        }
+
+        [Events.eAssemblyUnsuccessful] {
+          to = "error"
+          yields {
+            new csml.Eval { expression = "errorMsg = 'Assemble failed...'" }
+          }
+        }
+      }
+    }
+
+    ["return"] = new csml.State {
+      entry {
+        new csml.Invoke {
+          type = ServiceTypes.stReturnToStart
+        }
+      }
+
+      on {
+        [Events.eResetArm] {
+          to = "idle"
+          yields {
+            new csml.Match {
+              cases {
+                new csml.Case {
+                  of = "partsAssembled >= partsPerProduct"
+                  yields {
+                    new csml.Eval { expression = "partsAssembled = 0" }
+                    new csml.Emit {
+                      event { topic = Events.eProductComplete }
+                      target = "'jobController'"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+
+    ["jobDone"] = new csml.Terminal {}
+  }
+}

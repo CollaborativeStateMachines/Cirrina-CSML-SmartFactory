@@ -1,0 +1,77 @@
+import
+  "https://raw.githubusercontent.com/CollaborativeStateMachines/Cirrina-CSML-SmartFactory/refs/heads/develop/smartFactory/events.pkl"
+  as Events
+import
+  "https://raw.githubusercontent.com/CollaborativeStateMachines/Cirrina-CSML-SmartFactory/refs/heads/develop/smartFactory/serviceTypes.pkl"
+  as ServiceTypes
+import
+  "https://raw.githubusercontent.com/CollaborativeStateMachines/Cirrina-CSML-SmartFactory/refs/heads/develop/smartFactory/variables.pkl"
+  as Vars
+import
+  "https://raw.githubusercontent.com/CollaborativeStateMachines/Cirrina/refs/heads/develop/src/main/resources/pkl/csm/csml.pkl"
+
+sm = new csml.StateMachine {
+  transient = new Mapping {
+    ["nScans"] = "0"
+    ["nAssemblies"] = "0"
+  }
+  states {
+    ["monitoring"] = new csml.Initial {
+      on {
+        [Events.eScanned] {
+          yields {
+            new csml.Eval { expression = "nScans += 1" }
+            new csml.Emit { event = new csml.Internal { topic = Events.eSendStatistics } }
+          }
+        }
+        [Events.eAssemblyComplete] {
+          yields {
+            new csml.Eval { expression = "nAssemblies += 1" }
+            new csml.Emit { event = new csml.Internal { topic = Events.eSendStatistics } }
+          }
+        }
+        [Events.eSendStatistics] {
+          yields {
+            new csml.Invoke {
+              type = ServiceTypes.stSendStatistics
+              input {
+                ["nScans"] = "nScans"
+                ["nAssemblies"] = "nAssemblies"
+                ["productsCompleted"] = "\(Vars.vProductsCompleted)"
+                ["jobDone"] = "\(Vars.vIsJobDone)"
+              }
+            }
+          }
+        }
+        [Events.eJobDone] {
+          to = "jobDoneLog"
+        }
+      }
+    }
+
+    ["jobDoneLog"] = new csml.State {
+      entry {
+        new csml.Invoke {
+          type = ServiceTypes.stSendStatistics
+          input {
+            ["nScans"] = "nScans"
+            ["nAssemblies"] = "nAssemblies"
+            ["productsCompleted"] = "\(Vars.vProductsCompleted)"
+            ["jobDone"] = "\(Vars.vIsJobDone)"
+          }
+          emits {
+            new csml.ConditionalEvent {
+              event = new csml.Internal { topic = Events.eMonitorJobCompletionStatisticsLogged }
+            }
+          }
+        }
+      }
+
+      on {
+        [Events.eMonitorJobCompletionStatisticsLogged] { to = "jobDone" }
+      }
+    }
+
+    ["jobDone"] = new csml.Terminal {}
+  }
+}

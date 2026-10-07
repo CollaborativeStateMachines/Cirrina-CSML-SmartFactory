@@ -1,0 +1,10 @@
+// This module contains all persistent variable definitions for the CSM SmartFactory
+
+// Variable indicating if the job is done
+vIsJobDone = "isJobDone"
+
+// Variable storing the log messages
+vLogs = "logProcessorLogs"
+
+// Variable storing the number of completed products
+vProductsCompleted = "productsCompleted"

@@ -1,0 +1,70 @@
+import
+  "https://raw.githubusercontent.com/CollaborativeStateMachines/Cirrina-CSML-SmartFactory/refs/heads/develop/smartFactory/events.pkl"
+  as Events
+import
+  "https://raw.githubusercontent.com/CollaborativeStateMachines/Cirrina-CSML-SmartFactory/refs/heads/develop/smartFactory/serviceTypes.pkl"
+  as ServiceTypes
+import
+  "https://raw.githubusercontent.com/CollaborativeStateMachines/Cirrina/refs/heads/develop/src/main/resources/pkl/csm/csml.pkl"
+
+sm = new csml.StateMachine {
+  states {
+    ["loading"] = new csml.Initial {
+      on {
+        [Events.eObjectValid] {
+          to = "transporting"
+        }
+        [Events.eJobDone] {
+          to = "jobDone"
+        }
+      }
+    }
+    ["transporting"] = new csml.State {
+      entry {
+        new csml.Invoke {
+          type = ServiceTypes.stMoveBelt
+        }
+      }
+
+      exit {
+        new csml.Invoke {
+          type = ServiceTypes.stStopBelt
+        }
+      }
+
+      on {
+        [Events.eStartUnload] {
+          to = "unloading"
+        }
+        [Events.eJobDone] {
+          to = "jobDone"
+        }
+      }
+    }
+
+    ["jobDone"] = new csml.Terminal {}
+
+    ["unloading"] = new csml.State {
+      entry {
+        new csml.Emit { event { topic = Events.eArmPickup }; target = "'arm'" }
+      }
+
+      after {
+        ["armPickupTimeout"] = new csml.Timeout {
+          delay = "1000"
+          triggers = new csml.Emit { event { topic = Events.eArmPickup }; target = "'arm'" }
+        }
+      }
+
+      on {
+        [Events.eJobDone] {
+          to = "jobDone"
+        }
+
+        [Events.ePickedUp] {
+          to = "loading"
+        }
+      }
+    }
+  }
+}

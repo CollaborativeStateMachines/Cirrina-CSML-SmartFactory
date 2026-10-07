@@ -1,0 +1,88 @@
+// This module contains all event topic definitions for the CSM SmartFactory
+
+// Event for indicating job is done
+eJobDone = "eJobDone"
+
+// Event for indicating a scan is complete
+eScanned = "eScanned"
+
+// Event for processing message
+eProcessMessage = "eProcessMessage"
+
+// Event for initiating pickup (by robotic arm)
+eArmPickup = "eArmPickup"
+
+// Event for indicating an object is valid
+eObjectValid = "eObjectValid"
+
+// Event for indicating a photo has been scanned (by conveyor camera)
+ePhotoScanned = "ePhotoScanned"
+
+// Event for indicating a scanned object is valid
+eCheckValidObject = "eCheckValidObject"
+
+// Event for indicating a scanned object is invalid
+eCheckInvalidObject = "eCheckInvalidObject"
+
+// Event for indicating that start sensor's beam has been interrupted
+eBeamInterruptedStart = "eBeamInterruptedStart"
+
+// Event for indicating that end sensor's beam has been interrupted
+eBeamInterruptedEnd = "eBeamInterruptedEnd"
+
+// Event for initating unloading (by conveyor belt)
+eStartUnload = "eStartUnload"
+
+// Event for initating check to see if the job is complete
+eCheckJobDone = "eCheckJobDone"
+
+// Event for indicating that pickup failed (by robotic arm)
+ePickupNotSuccess = "pickupNotSuccess"
+
+// Event for initating check for pickup success
+eCheckPickUpSuccess = "eCheckPickUpSuccess"
+
+// Event for indicating that the object has been picked up
+ePickedUp = "ePickedUp"
+
+// Event for initiating check for success of pickup retry
+eRetry = "eRetry"
+
+// Event for indicating updated pickup status
+eUpdatePickupStatus = "eUpdatePickupStatus"
+
+// Event for initiating check for success of assembly
+eCheckAssembleSuccess = "eCheckAssembleSuccess"
+
+// Event indicating successful assembly
+eAssemblySuccessful = "eAssemblySuccessful"
+
+// Event indicating unsuccessful assembly
+eAssemblyUnsuccessful = "eAssemblyUnsuccessful"
+
+// Event indicating that a new part was assembled
+eAssemblyComplete = "eAssemblyComplete"
+
+// Event indicating that the assembly of a new product was completed
+eProductComplete = "eProductComplete"
+
+// Event initiating transfer of statistics to external service
+eSendStatistics = "eSendStatistics"
+
+// Event indicating that a photo has been captured
+ePhotoCaptured = "ePhotoCaptured"
+
+// Event indicating that the statistics after job completion have been logged by the monitor
+eMonitorJobCompletionStatisticsLogged = "eMonitorJobCompletionStatisticsLogged"
+
+// Event indicating that the arm has been reset
+eResetArm = "eResetArm"
+
+// Event indicating that an invalid object has been discarded
+eObjectDiscarded = "eObjectDiscarded"
+
+// Event indicating that the production loop has started (for measurements)
+eProductionStarted = "eProductionStarted"
+
+// Event indicating that an part has been detected at the start of the belt
+ePartDetectedAtStart = "ePartDetectedAtStart"

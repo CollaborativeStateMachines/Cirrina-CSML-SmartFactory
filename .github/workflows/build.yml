@@ -1,21 +1,61 @@
 name: Build
+
 on:
   push:
     branches: ["develop"]
   pull_request:
     branches: ["develop"]
+
 jobs:
   Build:
-    if: github.repository == 'YourRepositoryNameHere'
-    name: Build
+    if: github.repository == 'CollaborativeStateMachines/Cirrina-CSML-SmartFactory'
     runs-on: ubuntu-latest
     permissions:
       contents: read
       checks: write
       pull-requests: write
+    strategy:
+      matrix:
+        project:
+          - benchmark-s1/smart-factory-service
+          - benchmark-s1/metrics-collector
+          - benchmark-s1/event-publisher
     steps:
       - name: Check out the repo
         uses: actions/checkout@v4
 
+      - name: Setup OpenJDK 25
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '25'
+
       - name: Perform commit linting
         uses: wagoid/commitlint-github-action@v6
+
+      - name: Provide Cirrina libraries
+        run: |
+          docker pull collaborativestatemachines/cirrina:unstable
+          docker create --name cirrina-libs collaborativestatemachines/cirrina:unstable
+          sudo mkdir -p /opt/cirrina
+          sudo docker cp cirrina-libs:/opt/cirrina/lib /opt/cirrina/lib
+          docker rm cirrina-libs
+
+      - name: Check Kotlin formatting
+        working-directory: ${{ matrix.project }}
+        run: ./gradlew ktfmtCheck
+
+      - name: Build using Gradle
+        working-directory: ${{ matrix.project }}
+        run: ./gradlew build
+
+      - name: Test using Gradle
+        working-directory: ${{ matrix.project }}
+        run: ./gradlew test
+
+      - name: Publish Test Report
+        uses: mikepenz/action-junit-report@v6
+        if: success() || failure()
+        with:
+          report_paths: '${{ matrix.project }}/build/test-results/test/TEST-*.xml'
+          annotate_only: true

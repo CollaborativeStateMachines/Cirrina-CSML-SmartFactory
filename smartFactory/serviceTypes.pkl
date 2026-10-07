@@ -1,0 +1,34 @@
+// This module contains all service types for the CSM SmartFactory
+
+// Service to move conveyor belt
+stMoveBelt = "moveBelt"
+
+// Service to stop conveyor belt
+stStopBelt = "stopBelt"
+
+// Service to take photo (by conveyor camera)
+stTakePhoto = "takePhoto"
+
+// Service to scan photo (by conveyor camera)
+stScanPhoto = "scanPhoto"
+
+// Service to pickup part (by robotic arm)
+stPickup = "pickUp"
+
+// Service to assemble part
+stAssemble = "assemble"
+
+// Service to return arm to start
+stReturnToStart = "returnToStart"
+
+// Service to process email message
+stProcessEmail = "processEmail"
+
+// Service to process sms message
+stProcessSms = "processSms"
+
+// Service to process statistics
+stSendStatistics = "sendStatistics"
+
+// Service to discard invalid object
+stDiscardObject = "discardObject"

@@ -1,0 +1,237 @@
+import
+  "https://raw.githubusercontent.com/CollaborativeStateMachines/Cirrina-CSML-SmartFactory/refs/heads/develop/smartFactory/events.pkl"
+  as Events
+import
+  "https://raw.githubusercontent.com/CollaborativeStateMachines/Cirrina-CSML-SmartFactory/refs/heads/develop/smartFactory/serviceTypes.pkl"
+  as ServiceTypes
+import
+  "https://raw.githubusercontent.com/CollaborativeStateMachines/Cirrina/refs/heads/develop/src/main/resources/pkl/csm/csml.pkl"
+
+sm = new csml.StateMachine {
+  transient = new Mapping {
+    ["firstDetection"] = "true"
+    ["waitingParts"] = "0L"
+  }
+
+  states {
+    ["detectingStart"] = new csml.Initial {
+      entry {
+        new csml.Match {
+          cases {
+            new csml.Case {
+              of = "waitingParts > 0"
+              yields {
+                new csml.Eval { expression = "waitingParts -= 1" }
+                new csml.Emit { event = new csml.Internal { topic = Events.ePartDetectedAtStart } }
+              }
+            }
+          }
+        }
+      }
+
+      on {
+        [Events.eBeamInterruptedStart] {
+          to = "detectingStart"
+          yields {
+            new csml.Eval {
+              expression = "if(waitingParts != 9223372036854775807L) {waitingParts += 1;}"
+            }
+            new csml.Match {
+              cases {
+                new csml.Case {
+                  of = "firstDetection"
+                  yields {
+                    new csml.Emit { event { topic = Events.eProductionStarted } }
+                    new csml.Eval { expression = "firstDetection = false" }
+                  }
+                }
+              }
+            }
+          }
+        }
+
+        [Events.ePartDetectedAtStart] {
+          to = "capturePhoto"
+        }
+
+        [Events.eJobDone] {
+          to = "jobDone"
+        }
+      }
+    }
+
+    ["capturePhoto"] = new csml.State {
+      entry {
+        new csml.Invoke {
+          type = ServiceTypes.stTakePhoto
+        }
+      }
+
+      on {
+        [Events.ePhotoCaptured] {
+          to = "scanPhoto"
+        }
+
+        [Events.eJobDone] {
+          to = "jobDone"
+        }
+
+        [Events.eBeamInterruptedStart] {
+          yields {
+            new csml.Eval {
+              expression = "if(waitingParts != 9223372036854775807L) {waitingParts += 1;}"
+            }
+          }
+        }
+      }
+    }
+
+    ["scanPhoto"] = new csml.State {
+      entry {
+        new csml.Invoke {
+          type = ServiceTypes.stScanPhoto
+          input {
+            ["imgData"] = "$data"
+          }
+        }
+      }
+
+      exit {
+        new csml.Emit { event { topic = Events.eScanned }; target = "'monitor'" }
+      }
+
+      on {
+        [Events.ePhotoScanned] {
+          yields {
+            new csml.Match {
+              cases {
+                new csml.Case {
+                  of = "$validObject"
+                  yields {
+                    new csml.Emit { event = new csml.Internal { topic = Events.eCheckValidObject } }
+                  }
+                }
+                new csml.Case {
+                  of = "!($validObject)"
+                  yields {
+                    new csml.Emit {
+                      event = new csml.Internal { topic = Events.eCheckInvalidObject }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+
+        [Events.eCheckInvalidObject] {
+          to = "error"
+        }
+
+        [Events.eCheckValidObject] {
+          to = "detectingEnd"
+          yields {
+            new csml.Emit {
+              event = new csml.Event { topic = Events.eObjectValid }
+              target = "'conveyorBelt'"
+            }
+          }
+        }
+
+        [Events.eJobDone] {
+          to = "jobDone"
+        }
+
+        [Events.eBeamInterruptedStart] {
+          yields {
+            new csml.Eval {
+              expression = "if(waitingParts != 9223372036854775807L) {waitingParts += 1;}"
+            }
+          }
+        }
+      }
+    }
+
+    ["error"] = new csml.State {
+      entry {
+        new csml.Emit {
+          event {
+            topic = Events.eProcessMessage
+            data { ["msg"] = "'Assembly error: Invalid object detected'" }
+          }
+          target = "'messageProcessor'"
+        }
+
+        new csml.Invoke {
+          type = ServiceTypes.stDiscardObject
+        }
+      }
+
+      on {
+        [Events.eJobDone] {
+          to = "jobDone"
+        }
+
+        [Events.eObjectDiscarded] {
+          to = "detectingStart"
+        }
+
+        [Events.eBeamInterruptedStart] {
+          yields {
+            new csml.Eval {
+              expression = "if(waitingParts != 9223372036854775807L) {waitingParts += 1;}"
+            }
+          }
+        }
+      }
+    }
+
+    ["detectingEnd"] = new csml.State {
+      on {
+        [Events.eBeamInterruptedEnd] {
+          to = "unloading"
+          yields {
+            new csml.Emit {
+              event = new csml.Event { topic = Events.eStartUnload }
+              target = "'conveyorBelt'"
+            }
+          }
+        }
+
+        [Events.eJobDone] {
+          to = "jobDone"
+        }
+
+        [Events.eBeamInterruptedStart] {
+          yields {
+            new csml.Eval {
+              expression = "if(waitingParts != 9223372036854775807L) {waitingParts += 1;}"
+            }
+          }
+        }
+      }
+    }
+
+    ["unloading"] = new csml.State {
+      on {
+        [Events.ePickedUp] {
+          to = "detectingStart"
+        }
+
+        [Events.eJobDone] {
+          to = "jobDone"
+        }
+
+        [Events.eBeamInterruptedStart] {
+          yields {
+            new csml.Eval {
+              expression = "if(waitingParts != 9223372036854775807L) {waitingParts += 1;}"
+            }
+          }
+        }
+      }
+    }
+
+    ["jobDone"] = new csml.Terminal {}
+  }
+}

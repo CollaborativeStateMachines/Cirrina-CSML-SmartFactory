@@ -1,0 +1,89 @@
+import
+  "https://raw.githubusercontent.com/CollaborativeStateMachines/Cirrina-CSML-SmartFactory/refs/heads/develop/smartFactory/events.pkl"
+  as Events
+import
+  "https://raw.githubusercontent.com/CollaborativeStateMachines/Cirrina-CSML-SmartFactory/refs/heads/develop/smartFactory/serviceTypes.pkl"
+  as ServiceTypes
+import
+  "https://raw.githubusercontent.com/CollaborativeStateMachines/Cirrina-CSML-SmartFactory/refs/heads/develop/smartFactory/variables.pkl"
+  as Vars
+import
+  "https://raw.githubusercontent.com/CollaborativeStateMachines/Cirrina/refs/heads/develop/src/main/resources/pkl/csm/csml.pkl"
+
+base = new csml.StateMachine {
+  states {
+    ["idle"] = new csml.Initial {
+      on {
+        [Events.eProcessMessage] {
+          to = "process"
+        }
+
+        [Events.eJobDone] {
+          to = "jobDone"
+        }
+      }
+    }
+
+    ["jobDone"] = new csml.Terminal {}
+  }
+}
+
+email = (base) {
+  states {
+    ["process"] = new csml.State {
+      entry {
+        new csml.Invoke {
+          type = ServiceTypes.stProcessEmail
+          input {
+            ["msg"] = "$msg"
+          }
+        }
+      }
+
+      always {
+        new csml.Transition {
+          to = "idle"
+        }
+      }
+    }
+  }
+}
+
+sms = (base) {
+  states {
+    ["process"] = new csml.State {
+      entry {
+        new csml.Invoke {
+          type = ServiceTypes.stProcessSms
+          input {
+            ["msg"] = "$msg"
+          }
+        }
+      }
+
+      always {
+        new csml.Transition {
+          to = "idle"
+        }
+      }
+    }
+  }
+}
+
+log = (base) {
+  states {
+    ["process"] = new csml.State {
+      entry {
+        new csml.Eval {
+          expression = "var newLog=\(Vars.vLogs); newLog.add($msg); \(Vars.vLogs)=newLog"
+        }
+      }
+
+      always {
+        new csml.Transition {
+          to = "idle"
+        }
+      }
+    }
+  }
+}

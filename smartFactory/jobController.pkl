@@ -1,0 +1,61 @@
+import
+  "https://raw.githubusercontent.com/CollaborativeStateMachines/Cirrina-CSML-SmartFactory/refs/heads/develop/smartFactory/events.pkl"
+  as Events
+import
+  "https://raw.githubusercontent.com/CollaborativeStateMachines/Cirrina-CSML-SmartFactory/refs/heads/develop/smartFactory/variables.pkl"
+  as Vars
+import
+  "https://raw.githubusercontent.com/CollaborativeStateMachines/Cirrina/refs/heads/develop/src/main/resources/pkl/csm/csml.pkl"
+
+sm = new csml.StateMachine {
+  transient = new Mapping {
+    ["totalProducts"] = "1"
+  }
+
+  states {
+    ["starting"] = new csml.Initial {
+      entry {
+        new csml.Emit {
+          event {
+            topic = Events.eProcessMessage
+            data { ["msg"] = "'Job started...'" }
+          }
+          target = "'messageProcessor'"
+        }
+      }
+
+      always {
+        new csml.Transition {
+          to = "running"
+        }
+      }
+    }
+
+    ["running"] = new csml.State {
+      on {
+        [Events.eProductComplete] {
+          yields {
+            new csml.Eval { expression = "\(Vars.vProductsCompleted) += 1" }
+            new csml.Emit { event = new csml.Internal { topic = Events.eCheckJobDone } }
+          }
+        }
+
+        [Events.eCheckJobDone] {
+          to = "jobDone"
+          provided = "\(Vars.vProductsCompleted) >= totalProducts"
+        }
+      }
+    }
+
+    ["jobDone"] = new csml.Terminal {
+      entry {
+        new csml.Eval { expression = "\(Vars.vIsJobDone) = true" }
+        new csml.Emit {
+          event { topic = Events.eProcessMessage; data { ["msg"] = "'Job done...'" } }
+          target = "'messageProcessor'"
+        }
+        new csml.Emit { event { topic = Events.eJobDone } }
+      }
+    }
+  }
+}
